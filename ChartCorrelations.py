@@ -12,4 +12,9 @@ def getStockHistoryCSV(whichNYSE):
 
 
 def plotCorrelations(stockHistory):
-    pd.DataFrame.plot(stockHistory,x='Date',y='Close')
+    x = stockHistory['Date'][0:-1]
+    y = (stockHistory['Adj Close'][0:-1] - stockHistory['Adj Close'][1:]) / stockHistory['Adj Close'][1:]
+    plot(x,y)
+    xlabel('Date')
+    ylabel('% Change Close-To-Close')
+    plot.show()
