@@ -1,6 +1,7 @@
 import pylab as plot
 import pandas as pd
 import numpy as np
+from scipy import stats
 import requests
 
 def getStockHistoryCSV(whichNYSE):
@@ -12,9 +13,9 @@ def getStockHistoryCSV(whichNYSE):
 
 
 def plotCorrelations(stockHistory):
-    x = stockHistory['Date'][0:-1]
-    y = (stockHistory['Adj Close'][0:-1] - stockHistory['Adj Close'][1:]) / stockHistory['Adj Close'][1:]
-    plot(x,y)
-    xlabel('Date')
-    ylabel('% Change Close-To-Close')
+    x = stockHistory['Date'][0:-1].values
+    y = stats.mstats.zscore(stockHistory['Adj Close'][0:-1].values - stockHistory['Adj Close'][1:].values) / stockHistory['Adj Close'][1:].values
+    plot.plot(x,y)
+    plot.xlabel('Date')
+    plot.ylabel('% Change Close-To-Close')
     plot.show()
