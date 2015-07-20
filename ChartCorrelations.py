@@ -85,8 +85,8 @@ def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
 def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
    
     whichWeight = len(expertWeights) - 1
-    amountDJIA = 1
-    amountNYSE = 0
+    amountDJIA = 1.0
+    amountNYSE = 0.0
     condensedData[whichExpert][0] = amountDJIA + amountNYSE
     for row in xrange(1,len(condensedData[whichExpert])):
 
@@ -194,11 +194,11 @@ allStratsRaw = {}
 expertWeights = {}
 pathToDJIACSV = 'DJIA.csv'
 allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
-commonName = 'Bank of America'
-whichNYSE = 'BAC'
+commonName = 'Apple'
+whichNYSE = 'AAPL'
 allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
 expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
 #classifier = trainSentimentAnlaysis()
 expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier)
 condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
-#plotCorrelations(condensedData)
+plotCorrelations(condensedData)
