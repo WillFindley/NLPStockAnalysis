@@ -10,6 +10,7 @@ import random as ran
 import time
 import urllib2
 from datetime import datetime
+import string
 
 
 def getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw):
@@ -74,18 +75,20 @@ def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
         toJoinData = allStratsRaw[keys.pop()]
         condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
     condensedData['Expert'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
-    condensedData = fillExpert(condensedData,whichNYSE,expertWeights)
+    condensedData['NYT-Bot'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
+    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
+    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot')
     condensedData = condensedData.set_index(u'Date')
     return condensedData
 
 
-def fillExpert(condensedData,whichNYSE,expertWeights):
+def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
    
     whichWeight = len(expertWeights) - 1
-    amountDJIA = 0.5
-    amountNYSE = 0.5
-    condensedData['Expert'][0] = amountDJIA + amountNYSE
-    for row in xrange(1,len(condensedData['Expert'])):
+    amountDJIA = 1
+    amountNYSE = 0
+    condensedData[whichExpert][0] = amountDJIA + amountNYSE
+    for row in xrange(1,len(condensedData[whichExpert])):
 
         # redistribute investment based on expert opinion
         if whichWeight >= 0 and condensedData['Date'][row] >= expertWeights[whichWeight-1][0]:
@@ -103,7 +106,7 @@ def fillExpert(condensedData,whichNYSE,expertWeights):
         amountNYSE *= condensedData[whichNYSE][row] / condensedData[whichNYSE][row-1]
         amountDJIA *= condensedData['DJIA'][row] / condensedData['DJIA'][row-1]
 
-        condensedData['Expert'][row] = amountNYSE + amountDJIA
+        condensedData[whichExpert][row] = amountNYSE + amountDJIA
 
     return condensedData
 
@@ -147,14 +150,46 @@ def getMovieReviews(url):
     return reviews
 
 
-def getNYTimesVote(whichNYSE,commonName,classifier):
+def getNYTimesExpert(whichNYSE,commonName,classifier):
+
+    NYTExpert = []
+
     page = 0
-    url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate('+',' ') + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
+    url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate(tbl = string.maketrans('+',' ')) + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
     f = urllib2.urlopen(req)
     results = f.read()
-    parsed_json = json.loads(results)
-    date_posted = parsed_json['response']['docs'][0]['pub_date']
-    date_posted = datetime.strptime(date_posted, '%Y-%m-%dT%H:%M:%SZ').date()
+    findNumHits = results.split('"hits":')[1]
+    numHits = int(findNumHits[:findNumHits.index(',')])
+
+    while numHits > 0:
+
+        if numHits > 10:
+            numLoops = 10
+        else: 
+            numLoops = numHits
+
+        for whichArticle in xrange(numLoops):
+            parsed_json = json.loads(results)
+            date_posted = parsed_json['response']['docs'][0]['pub_date']
+            date_posted = datetime.strptime(date_posted, '%Y-%m-%dT%H:%M:%SZ').date()
+
+            words = re.findall(r"[\w']+",json.dumps(parsed_json['response']['docs'][0]))
+            articleDict = dict([(word, True) for word in words])
+            valence = classifier.classify(articleDict)
+            if valence == 'pos':
+                NYTExpert.append((date_posted,1))
+            else:
+                NYTExpert.append((date_posted,0))
+
+        numHits -= 10
+        if numHits > 0:
+            page += 1
+            url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate(tbl = string.maketrans('+',' ')) + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
+            f = urllib2.urlopen(req)
+            results = f.read()
+
+    return NYTExpert
+
 
 def plotCorrelations(condensedData):
     keys = list(condensedData.columns)
@@ -168,12 +203,14 @@ def plotCorrelations(condensedData):
 
 
 #allStratsRaw = {}
+expertWeights = {}
 #pathToDJIACSV = 'DJIA.csv'
 #allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
 commonName = 'Bank of America'
 whichNYSE = 'BAC'
 #allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
-#expertWeights = getExpertStrategy(whichNYSE,allStratsRaw)
-#condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
+expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
 #classifier = trainSentimentAnlaysis()
-#plotCorrelations(condensedData)
+expertWeights['NYT-Bot'] = getNYTimesExpert(whichNYSE,commonName,classifier)
+condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
+plotCorrelations(condensedData)
