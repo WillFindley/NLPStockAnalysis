@@ -27,10 +27,35 @@ def getStockHistoryCSV(whichNYSE,allStratsRaw):
 
 
 def getExpertStrategy(whichNYSE,allStratsRaw):
+
+    MonthConversion = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
+    ActionConversion = {'Buy':1, 'Underperform':0, 'Sector Perform':0.5, 'Neutral':0.5, 'Outperform':1, 'Mkt Underperform':0, 'Mkt Perform':0.5, 'Hold':0.5, 'Perform':0.5, 'Accumulate':1, 'Sell':0, 'In Line':0.5, 'Strong Buy':1, 'Overweight':1, 'Sector Outperform':1, 'Equal-weight':0.5, "Market Perform": 0.5, "NT Strong Buy":1, "NT Buy":1, "Attractive":1, "Mkt Outperform":1, "NT Neutral":0.5, "NT Accum":1, "LT Buy":1, "Reduce":0, "NT Accumulate":1, "Perform In Line":0.5}
+
+    expertWeights = []
+
     page = requests.get('http://finance.yahoo.com/q/ud?s=' + whichNYSE)
-    lastRowInd = page.text.rindex('" nowrap>')
-    rowInd = page.text.index('" nowrap>')
+    lastRowInd = page.text.rindex('" nowrap>') + 9
+    rowInd = page.text.index('" nowrap>') + 9
     while rowInd <= lastRowInd:    
+        
+        # get date
+        dateCloseInd = page.text.index('</td>', rowInd)
+        dateList = page.text[rowInd,dateCloseInd].split('-')
+        dateList[1] = '-' + MonthConversion[dateList[1]]
+        dateList[2] = '-' + dateList[2]
+        date = pd.to_datetime(''.join(dateList), dayfirst=True)
+
+        # get action weight (1 for buy, 0.5 for hold, 0 for sell)
+        actionOpenInd = page.text.index('<b>', dateCloseInd) + 3
+        actionClosedInd = page.text.index('</b>', actionOpenInd)
+        action = ActionConversion[page.text[actionOpenInd,actionClosedInd]]
+
+        expertWeights.append((date,action))
+
+        if rowInd < lastRowInd:
+            rowInd = page.text.index('" nowrap>', actionClosedInd) + 9
+
+    return expertWeights
 
 
 def condenseStrategyData(allStratsRaw):
