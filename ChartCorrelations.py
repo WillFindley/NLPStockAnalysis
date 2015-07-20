@@ -198,7 +198,7 @@ commonName = 'Walt Disney'
 whichNYSE = 'DIS'
 allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
 expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
-#classifier = trainSentimentAnlaysis()
+classifier = trainSentimentAnlaysis()
 expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier)
 condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
 plotCorrelations(condensedData)
