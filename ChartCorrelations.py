@@ -6,7 +6,10 @@ import requests
 import nltk.classify.util
 from nltk.classify import NaiveBayesClassifier
 import re
-    
+import random as ran
+import time
+import urllib2
+
 
 def getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw):
     indexHistory = pd.read_csv(pathToDJIACSV)
@@ -105,10 +108,13 @@ def fillExpert(condensedData,whichNYSE,expertWeights):
 
 
 def trainSentimentAnlaysis():
-    positiveWords = getDictionaries('pos')
-    negativeWords = getDictionaries('neg')
+    reviewWords = getDictionaries('pos') + getDictionaries('neg')
+    ran.shuffle(reviewWords)
 
-    dict([(word, True) for word in words])
+    print 'train on %d reviews' % (len(reviewWords))
+    classifier = NaiveBayesClassifier.train(reviewWords)
+    classifier.show_most_informative_features()
+    return classifier
 
 
 def getDictionaries(valence):
@@ -117,11 +123,34 @@ def getDictionaries(valence):
     else:
         reviews = getReviews('http://www.imdb.com/chart/bottom')
 
-    words =[(dict([(word, True) for word in review]),val) for review in reviews]
+    words =[(dict([(word, True) for word in review]),valence) for review in reviews]
     return words
+
 
 def getReviews(url):
     page = requests.get(url)
+    pageProcessing = page.text.split('href="/title/')
+    movies = [pageProcessing[2*i][:pageProcessing[2*i].index('/')] for i in xrange(1,101)]
+    reviews = [getMovieReviews('http://www.imdb.com/title/' + movie + '/reviews?ref_=tt_ql_8') for movie in movies]
+    combinedReviews = []
+    for review in reviews:
+        combinedReviews += review
+    return combinedReviews
+
+
+def getMovieReviews(url):
+    print url
+    page = requests.get(url)
+    pageProcessing = page.text.split('\n</div>\n<p>')
+    reviews = [re.findall(r"[\w']+",pageProcessing[i][:pageProcessing[i].index('</p>')]) for i in xrange(1,len(pageProcessing))]
+    return reviews
+
+
+def getNYTimesVote(whichNYSE,classifier):
+    url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=BAC+NYSE+%22Bank+of+America%22&begin_date=20050101&end_date=20150720&page=0&sort=oldest&fl=snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'req = urllib2.Request(url, data=None, headers={'Content-Type': 'application/json'})
+    f = urllib2.urlopen(req)
+    results = f.read()
+
 
 
 def plotCorrelations(condensedData):
@@ -135,11 +164,12 @@ def plotCorrelations(condensedData):
     plt.show()
 
 
-allStratsRaw = {}
-pathToDJIACSV = 'DJIA.csv'
-allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
-whichNYSE = 'AAPL'
-allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
-expertWeights = getExpertStrategy(whichNYSE,allStratsRaw)
-condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
-plotCorrelations(condensedData)
+#allStratsRaw = {}
+#pathToDJIACSV = 'DJIA.csv'
+#allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
+#whichNYSE = 'AAPL'
+#allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
+#expertWeights = getExpertStrategy(whichNYSE,allStratsRaw)
+#condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
+#classifier = trainSentimentAnlaysis()
+#plotCorrelations(condensedData)
