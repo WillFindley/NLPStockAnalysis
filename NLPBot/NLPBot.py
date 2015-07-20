@@ -157,7 +157,7 @@ def getNYTimesExpert(commonName,classifier):
 
     for year in xrange(2005,2016):
 
-        url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=stock+%22' + commonName.translate(string.maketrans(' ','+')) + '%22&begin_date=' + str(year) + '0101&end_date=' + str(year) + '1231&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
+        url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=stock+%22' + commonName.translate(string.maketrans(' ','+')) + '%22&begin_date=' + str(year) + '0101&end_date=' + str(year) + '1231&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=' + NYTimesApi-Key
         req = urllib2.Request(url, data=None, headers={'Content-Type': 'application/json'})
         f = urllib2.urlopen(req)
         results = f.read()
@@ -192,6 +192,7 @@ def plotCorrelations(condensedData):
 
 allStratsRaw = {}
 expertWeights = {}
+NYTimesApi-Key = ''
 pathToDJIACSV = 'DJIA.csv'
 allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
 commonName = 'Walt Disney'
