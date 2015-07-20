@@ -76,8 +76,8 @@ def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
         condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
     condensedData['Expert'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
     condensedData['NYT-Bot'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
-    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
     condensedData = fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot')
+    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
     condensedData = condensedData.set_index(u'Date')
     return condensedData
 
@@ -151,44 +151,31 @@ def getMovieReviews(url):
     return reviews
 
 
-def getNYTimesExpert(whichNYSE,commonName,classifier):
+def getNYTimesExpert(commonName,classifier):
 
     NYTExpert = []
 
-    page = 0
-    url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate(string.maketrans('+',' ')) + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
-    f = urllib2.urlopen(req)
-    results = f.read()
-    findNumHits = results.split('"hits":')[1]
-    numHits = int(findNumHits[:findNumHits.index(',')])
+    for year in xrange(2005,2016):
 
-    while numHits > 0:
+        url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=stock+%22' + commonName.translate(string.maketrans(' ','+')) + '%22&begin_date=' + str(year) + '0101&end_date=' + str(year) + '1231&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
+        req = urllib2.Request(url, data=None, headers={'Content-Type': 'application/json'})
+        f = urllib2.urlopen(req)
+        results = f.read()
 
-        if numHits > 10:
-            numLoops = 10
-        else: 
-            numLoops = numHits
-
-        for whichArticle in xrange(numLoops):
+        for whichArticle in xrange(10):
             parsed_json = json.loads(results)
-            date_posted = parsed_json['response']['docs'][0]['pub_date']
-            date_posted = datetime.strptime(date_posted, '%Y-%m-%dT%H:%M:%SZ').date()
+            date_posted = parsed_json['response']['docs'][whichArticle]['pub_date']
+            date_posted = datetime.strptime(date_posted, '%Y-%m-%dT%H:%M:%SZ')
 
-            words = re.findall(r"[\w']+",json.dumps(parsed_json['response']['docs'][0]))
+            words = re.findall(r"[\w']+",json.dumps(parsed_json['response']['docs'][whichArticle]))
             articleDict = dict([(word, True) for word in words])
             valence = classifier.classify(articleDict)
             if valence == 'pos':
                 NYTExpert.append((date_posted,1))
             else:
                 NYTExpert.append((date_posted,0))
-
-        numHits -= 10
-        if numHits > 0:
-            page += 1
-            url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate(string.maketrans('+',' ')) + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
-            f = urllib2.urlopen(req)
-            results = f.read()
-
+        
+    NYTExpert = sorted(NYTExpert, key=lambda tup: tup[0], reverse=True)
     return NYTExpert
 
 
@@ -209,9 +196,9 @@ expertWeights = {}
 #allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
 commonName = 'Bank of America'
 whichNYSE = 'BAC'
-allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
-expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
+#allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
+#expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
 #classifier = trainSentimentAnlaysis()
-expertWeights['NYT-Bot'] = getNYTimesExpert(whichNYSE,commonName,classifier)
+expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier)
 condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
-plotCorrelations(condensedData)
+#plotCorrelations(condensedData)
