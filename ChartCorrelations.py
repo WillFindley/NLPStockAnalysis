@@ -9,6 +9,7 @@ import re
 import random as ran
 import time
 import urllib2
+from datetime import datetime
 
 
 def getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw):
@@ -146,12 +147,14 @@ def getMovieReviews(url):
     return reviews
 
 
-def getNYTimesVote(whichNYSE,classifier):
-    url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=BAC+NYSE+%22Bank+of+America%22&begin_date=20050101&end_date=20150720&page=0&sort=oldest&fl=snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'req = urllib2.Request(url, data=None, headers={'Content-Type': 'application/json'})
+def getNYTimesVote(whichNYSE,commonName,classifier):
+    page = 0
+    url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate('+',' ') + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
     f = urllib2.urlopen(req)
     results = f.read()
-
-
+    parsed_json = json.loads(results)
+    date_posted = parsed_json['response']['docs'][0]['pub_date']
+    date_posted = datetime.strptime(date_posted, '%Y-%m-%dT%H:%M:%SZ').date()
 
 def plotCorrelations(condensedData):
     keys = list(condensedData.columns)
@@ -167,7 +170,8 @@ def plotCorrelations(condensedData):
 #allStratsRaw = {}
 #pathToDJIACSV = 'DJIA.csv'
 #allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
-#whichNYSE = 'AAPL'
+commonName = 'Bank of America'
+whichNYSE = 'BAC'
 #allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
 #expertWeights = getExpertStrategy(whichNYSE,allStratsRaw)
 #condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
