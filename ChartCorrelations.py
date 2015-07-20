@@ -26,31 +26,38 @@ def getStockHistoryCSV(whichNYSE,allStratsRaw):
     return allStratsRaw
 
 
+def getExpertStrategy(whichNYSE,allStratsRaw):
+    page = requests.get('http://finance.yahoo.com/q/ud?s=' + whichNYSE)
+    lastRowInd = page.text.rindex('" nowrap>')
+    rowInd = page.text.index('" nowrap>')
+    while rowInd <= lastRowInd:    
+
+
 def condenseStrategyData(allStratsRaw):
     keys = list(allStratsRaw.keys())
     condensedData = allStratsRaw[keys.pop()]
     while len(keys) > 0:
         toJoinData = allStratsRaw[keys.pop()]
-        condensedData = merge(condensedData, toJoinData, how='inner', on='Date')
+        condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
+    condensedData = condensedData.set_index(u'Date')
     return condensedData
 
-def plotCorrelations(stockHistory):
-    dates = stockHistory['Date'].values
-    openingOpen = stockHistory['Adj Close'].values[-1]
-    stockAlone = stockHistory['Adj Close'].values / openingOpen
-    moneyAlone = np.array([1 for i in xrange(len(stockAlone))])
-    holdMoney, = plt.plot(dates, moneyAlone, label='Hold Money')
-    holdStock, = plt.plot(dates, stockAlone, label='Hold Stock')
-    plt.legend(handles=[holdMoney, holdStock])
+
+def plotCorrelations(condensedData):
+    keys = list(condensedData.columns)
+    # start all strategies at $1
+    for key in keys:
+        condensedData[key] = condensedData[key] / condensedData[key][-1]
+    condensedData.plot()
     plt.xlabel('Date')
     plt.ylabel('Money')
     plt.show()
 
 
-allStratsRaw = {}
-
-pathToDJIACSV = 'DJIA.csv'
-allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
-whichNYSE = 'GOOG'
+#allStratsRaw = {}
+#pathToDJIACSV = 'DJIA.csv'
+#allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
+whichNYSE = 'BAC'
 #allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
-
+condensedData = condenseStrategyData(allStratsRaw)
+plotCorrelations(condensedData)
