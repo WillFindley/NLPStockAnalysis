@@ -76,8 +76,8 @@ def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
         condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
     condensedData['Expert'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
     condensedData['NYT-Bot'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
-    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot')
     condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
+    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot')
     condensedData = condensedData.set_index(u'Date')
     return condensedData
 
@@ -190,14 +190,14 @@ def plotCorrelations(condensedData):
     plt.show()
 
 
-#allStratsRaw = {}
+allStratsRaw = {}
 expertWeights = {}
-#pathToDJIACSV = 'DJIA.csv'
-#allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
+pathToDJIACSV = 'DJIA.csv'
+allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
 commonName = 'Bank of America'
 whichNYSE = 'BAC'
-#allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
-#expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
+allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
+expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
 #classifier = trainSentimentAnlaysis()
 expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier)
 condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
