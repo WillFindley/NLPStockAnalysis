@@ -2,7 +2,7 @@
 	<head>
 	</head>
 	<body> 
-		<h1>This is my <emphasis>rough<emphasis> NLP-based Stock Market Bot Project</h1>
+		<h1>This is my rough, but effective NLP-based Stock Market Bot</h1>
 
 		<p> 
 		<a href="https://github.com/WillFindley/NLPStockAnalysis/tree/gh-pages/NLPBot">the code</a>
@@ -36,6 +36,13 @@
 		<img src="images/WMT.png">
 		<figcaption>Fig 4. - Wal-Mart doesn't move much, so neither did the experts or NYT-Bot.  Dummy bot won in a photo-finish because of more interesting market divergence in 2012.</figcaption>
 		</figure>
+		</p>
+		<h3>Where to go from here?</h3>
+		<p>
+		Algorithmically, this is far from its most interesting final form.  The most obvious next step is to run it on a subset of the market, instead of just one company versus and index.  This would allow for far more interesting composite stances on what to invest in and how.  Approaches for this mixture model would range from the more obvious linear regression variants to the more interesting unsupervised learning approaches.  This is also just a very simple buy/sell model without anything more complicated as a financial instrument. Finally, the natural language processing should be far more interesting and complicated, rather than just a simple dictionary of decontextualized words and their bayesian associations with good or bad.
+		</p>
+		<p>
+		Professionally, the code is nowhere near up to snuff.  Beyond needing to be structured and commented better to allow for more ease of flexibility with features, it has a for loop for updating the main consolidated data table with the emulated Expert and NYT-Bot results, and that has to go.  It's way too slow, and should probably be a list comprehension or something.  There is no meaningful user interface, either.  This is really stick just a hack of a script for proof-of-concept in a weekend.
 		</p>
 	</body>
 </html>
