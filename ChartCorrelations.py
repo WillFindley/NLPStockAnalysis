@@ -105,7 +105,8 @@ def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
 
         amountNYSE *= condensedData[whichNYSE][row] / condensedData[whichNYSE][row-1]
         amountDJIA *= condensedData['DJIA'][row] / condensedData['DJIA'][row-1]
-
+        
+        print whichExpert + ':  ' + str(condensedData['Date'][row]) + '     ' + str(amountDJIA) + '     ' + str(amountNYSE)
         condensedData[whichExpert][row] = amountNYSE + amountDJIA
 
     return condensedData
@@ -155,7 +156,7 @@ def getNYTimesExpert(whichNYSE,commonName,classifier):
     NYTExpert = []
 
     page = 0
-    url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate(tbl = string.maketrans('+',' ')) + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
+    url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate(string.maketrans('+',' ')) + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
     f = urllib2.urlopen(req)
     results = f.read()
     findNumHits = results.split('"hits":')[1]
@@ -184,7 +185,7 @@ def getNYTimesExpert(whichNYSE,commonName,classifier):
         numHits -= 10
         if numHits > 0:
             page += 1
-            url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate(tbl = string.maketrans('+',' ')) + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
+            url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=' + whichNYSE + '+%22' + commonName.translate(string.maketrans('+',' ')) + '%22&begin_date=20050101&end_date=20150720&page=' + str(page) + '&sort=oldest&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=190420596a5dfacbbb17f03f4030eb5e:14:63405689'
             f = urllib2.urlopen(req)
             results = f.read()
 
@@ -208,7 +209,7 @@ expertWeights = {}
 #allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
 commonName = 'Bank of America'
 whichNYSE = 'BAC'
-#allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
+allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
 expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
 #classifier = trainSentimentAnlaysis()
 expertWeights['NYT-Bot'] = getNYTimesExpert(whichNYSE,commonName,classifier)
