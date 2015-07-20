@@ -9,6 +9,8 @@ def getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw):
     indexHistory = pd.read_csv(pathToDJIACSV)
     indexHistory['DATE'] = pd.to_datetime(indexHistory['DATE'])
     indexHistory.columns = [u'Date', u'DJIA']
+    indexHistory['DJIA'] = indexHistory['DJIA'].convert_objects(convert_numeric=True)
+    indexHistory = indexHistory[np.isfinite(indexHistory['DJIA'])]
     allStratsRaw['DJIA'] = indexHistory
     return allStratsRaw
 
@@ -30,7 +32,7 @@ def condenseStrategyData(allStratsRaw):
     while len(keys) > 0:
         toJoinData = allStratsRaw[keys.pop()]
         condensedData = merge(condensedData, toJoinData, how='inner', on='Date')
-
+    return condensedData
 
 def plotCorrelations(stockHistory):
     dates = stockHistory['Date'].values
@@ -46,3 +48,9 @@ def plotCorrelations(stockHistory):
 
 
 allStratsRaw = {}
+
+pathToDJIACSV = 'DJIA.csv'
+allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
+whichNYSE = 'GOOG'
+#allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
+
