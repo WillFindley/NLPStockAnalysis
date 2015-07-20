@@ -3,7 +3,10 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import requests
-
+import nltk.classify.util
+from nltk.classify import NaiveBayesClassifier
+import re
+    
 
 def getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw):
     indexHistory = pd.read_csv(pathToDJIACSV)
@@ -99,6 +102,26 @@ def fillExpert(condensedData,whichNYSE,expertWeights):
         condensedData['Expert'][row] = amountNYSE + amountDJIA
 
     return condensedData
+
+
+def trainSentimentAnlaysis():
+    positiveWords = getDictionaries('pos')
+    negativeWords = getDictionaries('neg')
+
+    dict([(word, True) for word in words])
+
+
+def getDictionaries(valence):
+    if valence == 'pos':
+        reviews = getReviews('http://www.imdb.com/chart/top?ref_=nv_ch_250_4')
+    else:
+        reviews = getReviews('http://www.imdb.com/chart/bottom')
+
+    words =[(dict([(word, True) for word in review]),val) for review in reviews]
+    return words
+
+def getReviews(url):
+    page = requests.get(url)
 
 
 def plotCorrelations(condensedData):
