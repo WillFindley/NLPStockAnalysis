@@ -38,7 +38,7 @@ def getStockHistoryCSV(whichNYSE,allStratsRaw):
 def getExpertStrategy(whichNYSE,allStratsRaw):
 
     MonthConversion = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
-    ActionConversion = {'Buy':1, 'Underperform':0, 'Sector Perform':0.5, 'Neutral':0.5, 'Outperform':1, 'Mkt Underperform':0, 'Mkt Perform':0.5, 'Hold':0.5, 'Perform':0.5, 'Accumulate':1, 'Sell':0, 'In Line':0.5, 'Strong Buy':1, 'Overweight':1, 'Sector Outperform':1, 'Equal-weight':0.5, "Market Perform": 0.5, "NT Strong Buy":1, "NT Buy":1, "Attractive":1, "Mkt Outperform":1, "NT Neutral":0.5, "NT Accum":1, "LT Buy":1, "Reduce":0, "NT Accumulate":1, "Perform In Line":0.5, 'Average':0.5, 'Source of Funds':0, 'Above Average':1, 'Over Weight':1, 'Equal Weight':0.5, 'Peer Perform':0.5, 'Positive':1, 'In-Line':0.5, 'In-line':0.5, 'LT Neutral':0.5, 'Add':1, 'Maintain Position':0.5, 'NT Accum/LT Accum':1, 'Top Pick':1, 'Recomm. List':1, 'LT Attractive':1}
+    ActionConversion = {'Buy':1, 'Underperform':0, 'Sector Perform':0.5, 'Neutral':0.5, 'Outperform':1, 'Mkt Underperform':0, 'Mkt Perform':0.5, 'Hold':0.5, 'Perform':0.5, 'Accumulate':1, 'Sell':0, 'In Line':0.5, 'Strong Buy':1, 'Overweight':1, 'Sector Outperform':1, 'Equal-weight':0.5, "Market Perform": 0.5, "NT Strong Buy":1, "NT Buy":1, "Attractive":1, "Mkt Outperform":1, "NT Neutral":0.5, "NT Accum":1, "LT Buy":1, "Reduce":0, "NT Accumulate":1, "Perform In Line":0.5, 'Average':0.5, 'Source of Funds':0, 'Above Average':1, 'Over Weight':1, 'Equal Weight':0.5, 'Peer Perform':0.5, 'Positive':1, 'In-Line':0.5, 'In-line':0.5, 'LT Neutral':0.5, 'Add':1, 'Maintain Position':0.5, 'NT Accum/LT Accum':1, 'Top Pick':1, 'Recomm. List':1, 'LT Attractive':1, 'Strong Sell':0, 'Underweight':0, 'Recomm List':1, 'Market Outperform':1, 'Perform-In-Line':0.5}
 
     expertWeights = []
 
@@ -194,8 +194,8 @@ allStratsRaw = {}
 expertWeights = {}
 pathToDJIACSV = 'DJIA.csv'
 allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
-commonName = 'Apple'
-whichNYSE = 'AAPL'
+commonName = 'Wal-Mart'
+whichNYSE = 'WMT'
 allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
 expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
 #classifier = trainSentimentAnlaysis()
