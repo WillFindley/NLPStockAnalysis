@@ -37,35 +37,43 @@ def getExpertStrategy(whichNYSE,allStratsRaw):
     lastRowInd = page.text.rindex('" nowrap>') + 9
     rowInd = page.text.index('" nowrap>') + 9
     while rowInd <= lastRowInd:    
-        
         # get date
         dateCloseInd = page.text.index('</td>', rowInd)
-        dateList = page.text[rowInd,dateCloseInd].split('-')
-        dateList[1] = '-' + MonthConversion[dateList[1]]
-        dateList[2] = '-' + dateList[2]
+        dateList = page.text[rowInd:dateCloseInd].split('-')
+        dateList[1] = '-' + str(MonthConversion[dateList[1]])
+        dateList[2] = '-' + str(dateList[2])
         date = pd.to_datetime(''.join(dateList), dayfirst=True)
 
         # get action weight (1 for buy, 0.5 for hold, 0 for sell)
         actionOpenInd = page.text.index('<b>', dateCloseInd) + 3
         actionClosedInd = page.text.index('</b>', actionOpenInd)
-        action = ActionConversion[page.text[actionOpenInd,actionClosedInd]]
+        action = ActionConversion[page.text[actionOpenInd:actionClosedInd]]
 
         expertWeights.append((date,action))
 
         if rowInd < lastRowInd:
             rowInd = page.text.index('" nowrap>', actionClosedInd) + 9
+        else:
+            break
 
     return expertWeights
 
 
-def condenseStrategyData(allStratsRaw):
+def condenseStrategyData(allStratsRaw,expertWeights):
     keys = list(allStratsRaw.keys())
     condensedData = allStratsRaw[keys.pop()]
     while len(keys) > 0:
         toJoinData = allStratsRaw[keys.pop()]
         condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
+    condensedData['Expert'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
+    condensedData = fillExpert(condensedData,expertWeights)
     condensedData = condensedData.set_index(u'Date')
     return condensedData
+
+
+def fillExpert(condensedData,ExpertWeights):
+
+    
 
 
 def plotCorrelations(condensedData):
@@ -84,5 +92,6 @@ def plotCorrelations(condensedData):
 #allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
 whichNYSE = 'BAC'
 #allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
-condensedData = condenseStrategyData(allStratsRaw)
-plotCorrelations(condensedData)
+#expertWeights = getExpertStrategy(whichNYSE,allStratsRaw)
+condensedData = condenseStrategyData(allStratsRaw,expertWeights)
+#plotCorrelations(condensedData)
