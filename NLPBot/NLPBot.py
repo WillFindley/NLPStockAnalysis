@@ -14,6 +14,8 @@ import string
 import argparse
 import sys
 import json
+import cPickle as pickle
+import os.path
 
 
 # gets the Dow Jones Industrial Average history from a downloaded csv (link in README)
@@ -24,8 +26,7 @@ def getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw):
     indexHistory.columns = [u'Date', u'DJIA']
     indexHistory['DJIA'] = indexHistory['DJIA'].convert_objects(convert_numeric=True) # some of the value entries are blank, and we want NaNs
     indexHistory = indexHistory[np.isfinite(indexHistory['DJIA'])] # remove the NaN rows
-    allStratsRaw['DJIA'] = indexHistory # store in our stock object
-    return allStratsRaw
+    return indexHistory 
 
 
 # gets the daily history for a chosen stock (by NYSE ticker) from Yahoo Finance
@@ -38,13 +39,12 @@ def getStockHistoryCSV(whichNYSE,allStratsRaw):
     stockHistory['Date'] = pd.to_datetime(stockHistory['Date']) # fix date issue as above
     stockHistory.columns = [u'Date', unicode(whichNYSE,"utf-8")]
     stockHistory = stockHistory.iloc[::-1] # reverse the rows in time, to bring them in line with what the algorithm does below
-    allStratsRaw[whichNYSE] = stockHistory # store in our stock object
-    return allStratsRaw
+    return stockHistory 
 
 
 # determines on what days the "Expert" strategy is updates, and what it wants to do
 # this can be made far more interesting and sophisticated in the future
-def getExpertStrategy(whichNYSE,allStratsRaw):
+def getExpertStrategy(whichNYSE,allStratsRaw,addActions):
 
     # fix for the datetime conversion
     MonthConversion = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
@@ -71,9 +71,11 @@ def getExpertStrategy(whichNYSE,allStratsRaw):
         # get action weight (1 for buy, 0.5 for hold, 0 for sell)
         actionOpenInd = page.text.index('<b>', dateCloseInd) + 3
         actionClosedInd = page.text.index('</b>', actionOpenInd)
-        action = ActionConversion[page.text[actionOpenInd:actionClosedInd]]
 
-        expertWeights.append((date,action))
+        # makes sure to only crash if desired from CLI
+        if addActions or key in ActionConversion:
+            action = ActionConversion[page.text[actionOpenInd:actionClosedInd]]
+            expertWeights.append((date,action))
 
         if rowInd < lastRowInd:
             rowInd = page.text.index('" nowrap>', actionClosedInd) + 9
@@ -243,21 +245,61 @@ def plotCorrelations(condensedData):
 
 
 # run the Bot
-def NLPBot(whichNYSE,commonName,NYTimesApiKey):
-    expertWeights = {}
-    allStratsRaw = {}
-    pathToDJIACSV = 'DJIA.csv'
-    allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
-    allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
-    expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
-    classifier = trainSentimentAnlaysis()
-    expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier,NYTimesApiKey)
-    condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
+def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
+
+    if update == 'True':
+        allStratsRaw = None
+        classifier = None
+        expertWeights = None
+        condensedData = None
+    else:
+        if os.path.isfile('allStratsRaw.p'):
+            allStratsRaw = pickle.load(open("allStratsRaw.p", "rb"))
+        else:
+            allStratsRaw = None
+        if os.path.isfile('classifier.p'):
+            classifier = pickle.load(open("classifier.p", "rb"))
+        else:
+            classifier = None
+        if os.path.isfile('expertWeights.p'):
+            expertWeights = pickle.load(open("expertWeights.p", "rb"))
+        else:
+            expertWeights = None
+        if os.path.isfile('condensedData.p'):
+            condensedData = pickle.load(open("condensedData.p", "rb")) 
+        else:
+            condensedData = None
+   
+    if not isinstance(allStratsRaw, dict) or not 'DJIA' in allStratsRaw:
+        pathToDJIACSV = 'DJIA.csv'
+        allStratsRaw['DJIA'] = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
+        pickle.dump(allStratsRaw, open("allStratsRaw.p", "wb"))
+
+    if not isinstance(allStratsRaw, dict) or not whichNYSE in allStratsRaw:
+        allStratsRaw[whichNYSE] = getStockHistoryCSV(whichNYSE,allStratsRaw)
+        pickle.dump(allStratsRaw, open("allStratsRaw.p", "wb"))
+  
+    if not isinstance(expertWeights, dict) or not 'Expert' in expertWeights:
+        expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw,addActions=='True')   
+        pickle.dump(expertWeights, open("expertWeights.p", "wb"))
+
+    if not isinstance(expertWeights, dict) or not 'NYT-Bot' in expertWeights:
+        if classifier == None:
+            classifier = trainSentimentAnlaysis()
+            pickle.dump(classifier, open("classifier.p", "wb"))
+        expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier,NYTimesApiKey)
+        pickle.dump(expertWeights, open("expertWeights.p", "wb"))
+
+    if not isinstance(condensedData, pd.DataFrame) or not whichNYSE in condensedData:
+        condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
+        pickle.dump(condensedData, open("condensedData.p", "wb"))
+
     plotCorrelations(condensedData)
+
 
 if __name__ == '__main__':
 
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 7:
         print "\n" \
             "Your number of arguments is " + str(len(sys.argv)-2) + "\n" \
             "\n" \
@@ -272,7 +314,9 @@ if __name__ == '__main__':
             "\n" \
             "arg3 - what is your New York Times Article API V2 key\n" \
             "\n" \
-            "arg4 - True or False : do you want to recalculate values for everything already saved from previous runs\n" \
+            "arg4 - True or False : do you want to redownload and recalculate values for everything already saved from previous runs?\n" \
+            "\n" \
+            "arg5 - True or False : do you want to have crashes on unexpected Expert Actions so that you can manually edit/update the dictionary in this program?\n" \
             "\n"
     else:
         function_map = { 
@@ -283,7 +327,8 @@ if __name__ == '__main__':
         parser.add_argument('whichNYSE')
         parser.add_argument('commonName')
         parser.add_argument('NYTimesApiKey')
-        parser.add_argument('update', type=bool)
+        parser.add_argument('update')
+        parser.add_argument('addActions')
         args = parser.parse_args()
         function = function_map[args.command]
-        function(args.whichNYSE, args.commonName, args.NYTimesApiKey)
+        function(args.whichNYSE, args.commonName, args.NYTimesApiKey, args.update, args.addActions)
