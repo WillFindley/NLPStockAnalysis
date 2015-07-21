@@ -43,12 +43,18 @@ def getStockHistoryCSV(whichNYSE,allStratsRaw):
 # this can be made far more interesting and sophisticated in the future
 def getExpertStrategy(whichNYSE,allStratsRaw):
 
+    # fix for the datetime conversion
     MonthConversion = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
+    # this, obnoxiously, has no field standard and needs to be manually updated every time a new one is encountered
+    # a more clever and elegant way to hand new terms should be determined
+    # in this case, something equivalent to a "Buy" translates to a 1, a "Neutral" translates to a 0.5, and a "Sell" translates to a 0
     ActionConversion = {'Buy':1, 'Underperform':0, 'Sector Perform':0.5, 'Neutral':0.5, 'Outperform':1, 'Mkt Underperform':0, 'Mkt Perform':0.5, 'Hold':0.5, 'Perform':0.5, 'Accumulate':1, 'Sell':0, 'In Line':0.5, 'Strong Buy':1, 'Overweight':1, 'Sector Outperform':1, 'Equal-weight':0.5, "Market Perform": 0.5, "NT Strong Buy":1, "NT Buy":1, "Attractive":1, "Mkt Outperform":1, "NT Neutral":0.5, "NT Accum":1, "LT Buy":1, "Reduce":0, "NT Accumulate":1, "Perform In Line":0.5, 'Average':0.5, 'Source of Funds':0, 'Above Average':1, 'Over Weight':1, 'Equal Weight':0.5, 'Peer Perform':0.5, 'Positive':1, 'In-Line':0.5, 'In-line':0.5, 'LT Neutral':0.5, 'Add':1, 'Maintain Position':0.5, 'NT Accum/LT Accum':1, 'Top Pick':1, 'Recomm. List':1, 'LT Attractive':1, 'Strong Sell':0, 'Underweight':0, 'Recomm List':1, 'Market Outperform':1, 'Perform-In-Line':0.5, 'Long-term Buy':1, 'Sector Underperform':0, '':0, 'Trading Buy':1, 'Outperf. Signif.':1, 'Recommended List':1, 'ST Neutral':0.5, 'Mkt Performer':0.5}
 
     expertWeights = []
 
     page = requests.get('http://finance.yahoo.com/q/ud?s=' + whichNYSE)
+
+    # this way of parsing the text works well enough, but I think the split way above is more elegant and slightly faster
     lastRowInd = page.text.rindex('" nowrap>') + 9
     rowInd = page.text.index('" nowrap>') + 9
     while rowInd <= lastRowInd:    
@@ -74,48 +80,27 @@ def getExpertStrategy(whichNYSE,allStratsRaw):
     return expertWeights
 
 
+# takes the expertly determined weights for given dates for both "Experts" and "NYT-Bot and appends them to the stock DataFrame
 def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
     keys = list(allStratsRaw.keys())
+
+    # doing this before the expert models below is key for restricting dates to only those with useful data
     condensedData = allStratsRaw[keys.pop()]
+    # already set up for multiple stocks, they just need to be implemented at the main program level
     while len(keys) > 0:
         toJoinData = allStratsRaw[keys.pop()]
         condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
+    # this series of steps for adding the expert models is too slow for reasons mentioned in the fillExpert function
     condensedData['Expert'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
     condensedData['NYT-Bot'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
     condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
     condensedData = fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot')
+
+    # this step is necessary for the plotting feature for dataframes to work as desired
     condensedData = condensedData.set_index(u'Date')
     return condensedData
 
 
-def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
-   
-    whichWeight = len(expertWeights) - 1
-    amountDJIA = 1.0
-    amountNYSE = 0.0
-    condensedData[whichExpert][0] = amountDJIA + amountNYSE
-    for row in xrange(1,len(condensedData[whichExpert])):
-
-        # redistribute investment based on expert opinion
-        if whichWeight >= 0 and condensedData['Date'][row] >= expertWeights[whichWeight-1][0]:
-            whichWeight -= 1
-            if expertWeights[whichWeight][1] == 1:
-                amountNYSE += amountDJIA
-                amountDJIA = 0
-            elif expertWeights[whichWeight][1] == 0:
-                amountDJIA += amountNYSE
-                amountNYSE = 0
-            else:
-                amountNYSE = (amountNYSE+amountDJIA)/2
-                amountDJIA = amountNYSE
-
-        amountNYSE *= condensedData[whichNYSE][row] / condensedData[whichNYSE][row-1]
-        amountDJIA *= condensedData['DJIA'][row] / condensedData['DJIA'][row-1]
-        
-        print whichExpert + ':  ' + str(condensedData['Date'][row]) + '     ' + str(amountDJIA) + '     ' + str(amountNYSE)
-        condensedData[whichExpert][row] = amountNYSE + amountDJIA
-
-    return condensedData
 
 
 def trainSentimentAnlaysis():
@@ -183,6 +168,48 @@ def getNYTimesExpert(commonName,classifier):
         
     NYTExpert = sorted(NYTExpert, key=lambda tup: tup[0], reverse=True)
     return NYTExpert
+
+
+# this fleshes out the time series of the portfolio using the purchasing decisions of both the bot and the experts
+# there is a for loop in here that needs to be dealt with because it is way-way to slow
+def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
+   
+    whichWeight = len(expertWeights) - 1 # because of the temporal ordering on expert opinion, first date is the last element
+    amountDJIA = 1.0    # the safest default strategy is to be all index
+    amountNYSE = 0.0
+    # total portfolio is the sum of the stocks and index
+    # this calculation and setup is relatively inflexible and should be modified for multiple stocks strategies
+    condensedData[whichExpert][0] = amountDJIA + amountNYSE
+
+    # this is TOO SLOW.  Come up with a fast way by loop comprehension, or maybe not updating the table like this
+    for row in xrange(1,len(condensedData[whichExpert])):
+
+        # redistribute investment based on expert opinion
+        if whichWeight >= 0 and condensedData['Date'][row] >= expertWeights[whichWeight-1][0]: # there is a new date with a strategy now
+            whichWeight -= 1
+            # "Buy" means put all money in the stock
+            if expertWeights[whichWeight][1] == 1:
+                amountNYSE += amountDJIA
+                amountDJIA = 0
+            # "Sell" means put all money in the index
+            elif expertWeights[whichWeight][1] == 0:
+                amountDJIA += amountNYSE
+                amountNYSE = 0
+            # "Hold" means split money between stock and index
+            else:
+                amountNYSE = (amountNYSE+amountDJIA)/2
+                amountDJIA = amountNYSE
+
+        # update the amounts day over day for the index and stock
+        amountNYSE *= condensedData[whichNYSE][row] / condensedData[whichNYSE][row-1]
+        amountDJIA *= condensedData['DJIA'][row] / condensedData['DJIA'][row-1]
+        
+        # check progress
+        print whichExpert + ':  ' + str(condensedData['Date'][row]) + '     ' + str(amountDJIA) + '     ' + str(amountNYSE)
+        # maybe don't update table here
+        condensedData[whichExpert][row] = amountNYSE + amountDJIA
+
+    return condensedData
 
 
 def plotCorrelations(condensedData):
