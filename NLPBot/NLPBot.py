@@ -266,7 +266,8 @@ def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
             condensedData = None
    
     if not isinstance(allStratsRaw, dict) or not 'DJIA' in allStratsRaw:
-        allStratsRaw = {}
+        if not isinstance(allStratsRaw, dict):
+            allStratsRaw = {}
         pathToDJIACSV = 'DJIA.csv'
         allStratsRaw['DJIA'] = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
         pickle.dump(allStratsRaw, open("allStratsRaw.p", "wb"))
@@ -275,10 +276,10 @@ def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
         allStratsRaw[whichNYSE] = getStockHistoryCSV(whichNYSE,allStratsRaw)
         pickle.dump(allStratsRaw, open("allStratsRaw.p", "wb"))
   
-    if not isinstance(expertWeights, dict) or not isinstance(expertWeights[whichNYSE], dict) or not 'Expert' in expertWeights[whichNYSE]:
+    if not isinstance(expertWeights, dict) or not whichNYSE in expertWeights or not 'Expert' in expertWeights[whichNYSE]:
         if not isinstance(expertWeights, dict):
             expertWeights = {}
-        if not isinstance(expertWeights[whichNYSE], dict):
+        if not whichNYSE in expertWeights:
             expertWeights[whichNYSE] = {}
         expertWeights[whichNYSE]['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw,addActions=='True')   
         pickle.dump(expertWeights, open("expertWeights.p", "wb"))
