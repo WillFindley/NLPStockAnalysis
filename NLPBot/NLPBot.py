@@ -148,11 +148,11 @@ def getNYTimesExpert(commonName,classifier,NYTimesApiKey):
         req = urllib2.Request(url, data=None, headers={'Content-Type': 'application/json'})
         f = urllib2.urlopen(req)
         results = f.read()
+        parsed_json = json.loads(results)
 
         # since 10 articles are pulled per page by importance (meaning an ok spread across the year, focussing on major events if clustered)
-        for whichArticle in xrange(10):
+        for whichArticle in xrange(len(parsed_json['response']['docs'])):
             # parse its json structure to get the publication date
-            parsed_json = json.loads(results)
             date_posted = parsed_json['response']['docs'][whichArticle]['pub_date']
             date_posted = datetime.strptime(date_posted, '%Y-%m-%dT%H:%M:%SZ')
 
@@ -216,17 +216,11 @@ def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
 
 # takes the expertly determined weights for given dates for both "Experts" and "NYT-Bot and appends them to the stock DataFrame
 def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
-    keys = list(allStratsRaw.keys())
 
-    # doing this before the expert models below is key for restricting dates to only those with useful data
-    condensedData = allStratsRaw[keys.pop()]
-    # already set up for multiple stocks, they just need to be implemented at the main program level
-    while len(keys) > 0:
-        toJoinData = allStratsRaw[keys.pop()]
-        condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
+    condensedData = pd.merge(allStratsRaw['DJIA'], allStratsRaw[whichNYSE], how='inner', on='Date')
     # this series of steps for adding the expert models is too slow for reasons mentioned in the fillExpert function
-    condensedData['Expert'] = pd.Series(fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert'), index=condensedData.index)
-    condensedData['NYT-Bot'] = pd.Series(fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot'), index=condensedData.index)
+    condensedData['Expert'] = pd.Series(fillExpert(condensedData,whichNYSE,expertWeights[whichNYSE]['Expert'],'Expert'), index=condensedData.index)
+    condensedData['NYT-Bot'] = pd.Series(fillExpert(condensedData,whichNYSE,expertWeights[whichNYSE]['NYT-Bot'],'NYT-Bot'), index=condensedData.index)
 
     # this step is necessary for the plotting feature for dataframes to work as desired
     condensedData = condensedData.set_index(u'Date')
@@ -281,23 +275,28 @@ def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
         allStratsRaw[whichNYSE] = getStockHistoryCSV(whichNYSE,allStratsRaw)
         pickle.dump(allStratsRaw, open("allStratsRaw.p", "wb"))
   
-    if not isinstance(expertWeights, dict) or not 'Expert' in expertWeights:
-        expertWeights = {}
-        expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw,addActions=='True')   
+    if not isinstance(expertWeights, dict) or not isinstance(expertWeights[whichNYSE], dict) or not 'Expert' in expertWeights[whichNYSE]:
+        if not isinstance(expertWeights, dict):
+            expertWeights = {}
+        if not isinstance(expertWeights[whichNYSE], dict):
+            expertWeights[whichNYSE] = {}
+        expertWeights[whichNYSE]['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw,addActions=='True')   
         pickle.dump(expertWeights, open("expertWeights.p", "wb"))
 
-    if not 'NYT-Bot' in expertWeights:
+    if not 'NYT-Bot' in expertWeights[whichNYSE]:
         if classifier == None:
             classifier = trainSentimentAnlaysis()
             pickle.dump(classifier, open("classifier.p", "wb"))
-        expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier,NYTimesApiKey)
+        expertWeights[whichNYSE]['NYT-Bot'] = getNYTimesExpert(commonName,classifier,NYTimesApiKey)
         pickle.dump(expertWeights, open("expertWeights.p", "wb"))
 
-    if not isinstance(condensedData, pd.DataFrame) or not whichNYSE in condensedData:
-        condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
+    if not isinstance(condensedData, dict) or not whichNYSE in condensedData:
+        if not isinstance(condensedData, dict):
+            condensedData = {}
+        condensedData[whichNYSE] = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
         pickle.dump(condensedData, open("condensedData.p", "wb"))
 
-    plotCorrelations(condensedData)
+    plotCorrelations(condensedData[whichNYSE])
 
 
 if __name__ == '__main__':
