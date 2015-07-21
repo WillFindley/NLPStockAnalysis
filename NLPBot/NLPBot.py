@@ -11,6 +11,9 @@ import time
 import urllib2
 from datetime import datetime
 import string
+import argparse
+import sys
+import json
 
 
 # gets the Dow Jones Industrial Average history from a downloaded csv (link in README)
@@ -93,7 +96,7 @@ def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
     # this series of steps for adding the expert models is too slow for reasons mentioned in the fillExpert function
     condensedData['Expert'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
     condensedData['NYT-Bot'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
-    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
+#    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
     condensedData = fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot')
 
     # this step is necessary for the plotting feature for dataframes to work as desired
@@ -149,7 +152,7 @@ def getMovieReviews(url):
 
 
 # determines the NYT-Bot purchasing decision using IMDB classifier
-def getNYTimesExpert(commonName,classifier):
+def getNYTimesExpert(commonName,classifier,NYTimesApiKey):
 
     NYTExpert = []
 
@@ -157,7 +160,8 @@ def getNYTimesExpert(commonName,classifier):
     for year in xrange(2005,2016):
 
         # using the New York Times API to grab articles
-        url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=stock+%22' + commonName.translate(string.maketrans(' ','+')) + '%22&begin_date=' + str(year) + '0101&end_date=' + str(year) + '1231&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=' + NYTimesApi-Key
+        url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=stock+%22' + commonName.translate(string.maketrans(' ','+')) + '%22&begin_date=' + str(year) + '0101&end_date=' + str(year) + '1231&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=' + NYTimesApiKey
+        print repr(url)
         req = urllib2.Request(url, data=None, headers={'Content-Type': 'application/json'})
         f = urllib2.urlopen(req)
         results = f.read()
@@ -187,7 +191,7 @@ def getNYTimesExpert(commonName,classifier):
 # this fleshes out the time series of the portfolio using the purchasing decisions of both the bot and the experts
 # there is a for loop in here that needs to be dealt with because it is way-way to slow
 def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
-   
+
     whichWeight = len(expertWeights) - 1 # because of the temporal ordering on expert opinion, first date is the last element
     amountDJIA = 1.0    # the safest default strategy is to be all index
     amountNYSE = 0.0
@@ -217,7 +221,7 @@ def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
         # update the amounts day over day for the index and stock
         amountNYSE *= condensedData[whichNYSE][row] / condensedData[whichNYSE][row-1]
         amountDJIA *= condensedData['DJIA'][row] / condensedData['DJIA'][row-1]
-        
+
         # check progress
         print whichExpert + ':  ' + str(condensedData['Date'][row]) + '     ' + str(amountDJIA) + '     ' + str(amountNYSE)
         # maybe don't update table here
@@ -238,17 +242,48 @@ def plotCorrelations(condensedData):
     plt.show()
 
 
-# make a function for this, priority #1
-allStratsRaw = {}
-expertWeights = {}
-NYTimesApi-Key = ''
-pathToDJIACSV = 'DJIA.csv'
-allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
-commonName = 'Walt Disney'
-whichNYSE = 'DIS'
-allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
-expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
-classifier = trainSentimentAnlaysis()
-expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier)
-condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
-plotCorrelations(condensedData)
+# run the Bot
+def NLPBot(whichNYSE,commonName,NYTimesApiKey):
+    expertWeights = {}
+    allStratsRaw = {}
+    pathToDJIACSV = 'DJIA.csv'
+    allStratsRaw = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
+    allStratsRaw = getStockHistoryCSV(whichNYSE,allStratsRaw)
+    expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw)
+    classifier = trainSentimentAnlaysis()
+    expertWeights['NYT-Bot'] = getNYTimesExpert(commonName,classifier,NYTimesApiKey)
+    condensedData = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
+    plotCorrelations(condensedData)
+
+if __name__ == '__main__':
+
+    if len(sys.argv) != 6:
+        print "\n" \
+            "Your number of arguments is " + str(len(sys.argv)-2) + "\n" \
+            "\n" \
+            "The correct usage of NYT-Bot is as follows:\n" \
+            "\n" \
+            "python NLPBot.py NLPBot [arg1] [arg2] [arg3] [arg4]\n" \
+            "\n" \
+            "arg1 - what is the NYSE ticker label for the company you want to model, e.g. AAPL for Apple\n" \
+            "\n" \
+            "arg2 - what is the common name for the company, e.g. Bank\ of\ America for Bank of America\n" \
+            "       WARNING: you MUST escape spaces in the company name, i.e. a \" \" should be \"\\ \"\n" \
+            "\n" \
+            "arg3 - what is your New York Times Article API V2 key\n" \
+            "\n" \
+            "arg4 - True or False : do you want to recalculate values for everything already saved from previous runs\n" \
+            "\n"
+    else:
+        function_map = { 
+            'NLPBot': NLPBot
+        }
+        parser = argparse.ArgumentParser()
+        parser.add_argument('command')
+        parser.add_argument('whichNYSE')
+        parser.add_argument('commonName')
+        parser.add_argument('NYTimesApiKey')
+        parser.add_argument('update', type=bool)
+        args = parser.parse_args()
+        function = function_map[args.command]
+        function(args.whichNYSE, args.commonName, args.NYTimesApiKey)
