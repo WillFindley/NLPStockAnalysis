@@ -8,6 +8,8 @@ download the DJIA.csv file [from here](https://research.stlouisfed.org/fred2/ser
 
 download my NLPBot.py file
 
+if you want to save some processing time for creating new files on stuff I've already done, download the .p files and store them in teh same directory as your DJIA.csv and NLPBot.py files
+
 get a New York Times Articles API V2 key [from here](http://developer.nytimes.com/docs/read/article_search_api_v2)
 
 ## Usage
