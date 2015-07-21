@@ -5,7 +5,7 @@
 		<h1>This is my rough, but effective NLP-based Stock Market Bot</h1>
 
 		<p> 
-		<a href="https://github.com/WillFindley/NLPStockAnalysis/tree/gh-pages/NLPBot">the code</a>
+		<a href="https://github.com/WillFindley/NLPStockAnalysis/tree/gh-pages/NLPBot">download the code here</a>
 		</p>
 		<p>
 		This project mines prose from online sources for use in predicting stock distribution portfolios that beat current conventional wisdom. I have currently implemented <a href="http://developer.nytimes.com/docs/read/article_search_api_v2">The New York Times Articles API</a> for mining articles about relevant companies and determining the valence of opinion, positive or negative, about them.  These valences are based on a bayesian classifier that has been trained on scraped user reviews of what IMDB considers <a href="http://www.imdb.com/chart/top?ref_=chtbtm_ql_2">the best</a> and <a href="http://www.imdb.com/chart/bottom?ref_=chttp_ql_3">the worst</a> movies of all time, e.g., <a href="http://www.imdb.com/title/tt4009460/reviews?ref_=tt_ql_8">these reviews</a> for the worst movie.  If there is a sampled New York Times article on a given date (10 per year are sampled from 2005 to 2015) for a given company, and the classifier interprets it as positive, all funds are dumped from an index fund (on the Dow Jones) into that company.  If it classifies as negative, the position in the company is sold and all funds transfered into the index fund.  The assumption is the amount of money is small enough not to affect the price and liquid enough to be completed in a day.  It is a very, very dumb algorithm, this NYT-Bot. 
