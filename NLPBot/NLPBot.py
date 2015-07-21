@@ -101,18 +101,20 @@ def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
     return condensedData
 
 
-
-
+# figure out what good and bad text is like (stupidly) using IMDB user reviews
 def trainSentimentAnlaysis():
     reviewWords = getDictionaries('pos') + getDictionaries('neg')
-    ran.shuffle(reviewWords)
+    ran.shuffle(reviewWords) # this is only necessary if checking accuracy with cross-validation
 
+    # see number of reviews for training
     print 'train on %d reviews' % (len(reviewWords))
     classifier = NaiveBayesClassifier.train(reviewWords)
+    # interesting to see the most informative words and also to know that it's done
     classifier.show_most_informative_features()
     return classifier
 
 
+# pretty straightforward way to make a list of the tuples of review word dictionary with the valence of the review
 def getDictionaries(valence):
     if valence == 'pos':
         reviews = getReviews('http://www.imdb.com/chart/top?ref_=nv_ch_250_4')
@@ -123,49 +125,61 @@ def getDictionaries(valence):
     return words
 
 
+# get the words out of the review
 def getReviews(url):
     page = requests.get(url)
-    pageProcessing = page.text.split('href="/title/')
+    pageProcessing = page.text.split('href="/title/') # the split trick for parsing allows for list comprehensions for grabbing the movies
     movies = [pageProcessing[2*i][:pageProcessing[2*i].index('/')] for i in xrange(1,101)]
+    # grabs the movie reviews
     reviews = [getMovieReviews('http://www.imdb.com/title/' + movie + '/reviews?ref_=tt_ql_8') for movie in movies]
+    # fixes the list of list of reviews for a specific movie into a list of all reviews for all movies
     combinedReviews = []
     for review in reviews:
         combinedReviews += review
     return combinedReviews
 
 
+# parses the movie reviews
 def getMovieReviews(url):
-    print url
+    print url # this is just to let you see your scraping progress thus far
     page = requests.get(url)
-    pageProcessing = page.text.split('\n</div>\n<p>')
+    pageProcessing = page.text.split('\n</div>\n<p>') # splitting trick for list comprehension again
     reviews = [re.findall(r"[\w']+",pageProcessing[i][:pageProcessing[i].index('</p>')]) for i in xrange(1,len(pageProcessing))]
     return reviews
 
 
+# determines the NYT-Bot purchasing decision using IMDB classifier
 def getNYTimesExpert(commonName,classifier):
 
     NYTExpert = []
 
+    # get articles for years in the range of the Dow Jones csv (this should be automated in case year range changes)
     for year in xrange(2005,2016):
 
+        # using the New York Times API to grab articles
         url = 'http://api.nytimes.com/svc/search/v2/articlesearch.json?q=stock+%22' + commonName.translate(string.maketrans(' ','+')) + '%22&begin_date=' + str(year) + '0101&end_date=' + str(year) + '1231&fl=pub_date,snippet,lead_paragraph,abstract,headline&api-key=' + NYTimesApi-Key
         req = urllib2.Request(url, data=None, headers={'Content-Type': 'application/json'})
         f = urllib2.urlopen(req)
         results = f.read()
 
+        # since 10 articles are pulled per page by importance (meaning an ok spread across the year, focussing on major events if clustered)
         for whichArticle in xrange(10):
+            # parse its json structure to get the publication date
             parsed_json = json.loads(results)
             date_posted = parsed_json['response']['docs'][whichArticle]['pub_date']
             date_posted = datetime.strptime(date_posted, '%Y-%m-%dT%H:%M:%SZ')
 
+            # parse the json to get just the string for an individual article, which is then split into a word dictionary for 
+            # "Buy" or "Sell" determination by classifier
             words = re.findall(r"[\w']+",json.dumps(parsed_json['response']['docs'][whichArticle]))
             articleDict = dict([(word, True) for word in words])
             valence = classifier.classify(articleDict)
             if valence == 'pos':
-                NYTExpert.append((date_posted,1))
+                NYTExpert.append((date_posted,1)) # "Buy"
             else:
-                NYTExpert.append((date_posted,0))
-        
+                NYTExpert.append((date_posted,0)) # "Sell"
+
+    # since returns are by importance and not date, sort everything the correct way for condensing
     NYTExpert = sorted(NYTExpert, key=lambda tup: tup[0], reverse=True)
     return NYTExpert
 
@@ -212,9 +226,10 @@ def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
     return condensedData
 
 
+# make the pretty graphs
 def plotCorrelations(condensedData):
     keys = list(condensedData.columns)
-    # start all strategies at $1
+    # start all strategies at 1 to see their relative change in revenue
     for key in keys:
         condensedData[key] = condensedData[key] / condensedData[key][0]
     condensedData.plot()
@@ -223,6 +238,7 @@ def plotCorrelations(condensedData):
     plt.show()
 
 
+# make a function for this, priority #1
 allStratsRaw = {}
 expertWeights = {}
 NYTimesApi-Key = ''
