@@ -71,10 +71,11 @@ def getExpertStrategy(whichNYSE,allStratsRaw,addActions):
         # get action weight (1 for buy, 0.5 for hold, 0 for sell)
         actionOpenInd = page.text.index('<b>', dateCloseInd) + 3
         actionClosedInd = page.text.index('</b>', actionOpenInd)
+        actionKey = page.text[actionOpenInd:actionClosedInd]
 
         # makes sure to only crash if desired from CLI
-        if addActions or key in ActionConversion:
-            action = ActionConversion[page.text[actionOpenInd:actionClosedInd]]
+        if addActions or actionKey in ActionConversion:
+            action = ActionConversion[actionKey]
             expertWeights.append((date,action))
 
         if rowInd < lastRowInd:
@@ -271,19 +272,21 @@ def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
             condensedData = None
    
     if not isinstance(allStratsRaw, dict) or not 'DJIA' in allStratsRaw:
+        allStratsRaw = {}
         pathToDJIACSV = 'DJIA.csv'
         allStratsRaw['DJIA'] = getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw)
         pickle.dump(allStratsRaw, open("allStratsRaw.p", "wb"))
 
-    if not isinstance(allStratsRaw, dict) or not whichNYSE in allStratsRaw:
+    if not whichNYSE in allStratsRaw:
         allStratsRaw[whichNYSE] = getStockHistoryCSV(whichNYSE,allStratsRaw)
         pickle.dump(allStratsRaw, open("allStratsRaw.p", "wb"))
   
     if not isinstance(expertWeights, dict) or not 'Expert' in expertWeights:
+        expertWeights = {}
         expertWeights['Expert'] = getExpertStrategy(whichNYSE,allStratsRaw,addActions=='True')   
         pickle.dump(expertWeights, open("expertWeights.p", "wb"))
 
-    if not isinstance(expertWeights, dict) or not 'NYT-Bot' in expertWeights:
+    if not 'NYT-Bot' in expertWeights:
         if classifier == None:
             classifier = trainSentimentAnlaysis()
             pickle.dump(classifier, open("classifier.p", "wb"))
