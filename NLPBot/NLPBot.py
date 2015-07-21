@@ -51,7 +51,7 @@ def getExpertStrategy(whichNYSE,allStratsRaw,addActions):
     # this, obnoxiously, has no field standard and needs to be manually updated every time a new one is encountered
     # a more clever and elegant way to hand new terms should be determined
     # in this case, something equivalent to a "Buy" translates to a 1, a "Neutral" translates to a 0.5, and a "Sell" translates to a 0
-    ActionConversion = {'Buy':1, 'Underperform':0, 'Sector Perform':0.5, 'Neutral':0.5, 'Outperform':1, 'Mkt Underperform':0, 'Mkt Perform':0.5, 'Hold':0.5, 'Perform':0.5, 'Accumulate':1, 'Sell':0, 'In Line':0.5, 'Strong Buy':1, 'Overweight':1, 'Sector Outperform':1, 'Equal-weight':0.5, "Market Perform": 0.5, "NT Strong Buy":1, "NT Buy":1, "Attractive":1, "Mkt Outperform":1, "NT Neutral":0.5, "NT Accum":1, "LT Buy":1, "Reduce":0, "NT Accumulate":1, "Perform In Line":0.5, 'Average':0.5, 'Source of Funds':0, 'Above Average':1, 'Over Weight':1, 'Equal Weight':0.5, 'Peer Perform':0.5, 'Positive':1, 'In-Line':0.5, 'In-line':0.5, 'LT Neutral':0.5, 'Add':1, 'Maintain Position':0.5, 'NT Accum/LT Accum':1, 'Top Pick':1, 'Recomm. List':1, 'LT Attractive':1, 'Strong Sell':0, 'Underweight':0, 'Recomm List':1, 'Market Outperform':1, 'Perform-In-Line':0.5, 'Long-term Buy':1, 'Sector Underperform':0, '':0, 'Trading Buy':1, 'Outperf. Signif.':1, 'Recommended List':1, 'ST Neutral':0.5, 'Mkt Performer':0.5}
+    ActionConversion = {'Buy':1, 'Underperform':0, 'Sector Perform':0.5, 'Neutral':0.5, 'Outperform':1, 'Mkt Underperform':0, 'Mkt Perform':0.5, 'Hold':0.5, 'Perform':0.5, 'Accumulate':1, 'Sell':0, 'In Line':0.5, 'Strong Buy':1, 'Overweight':1, 'Sector Outperform':1, 'Equal-weight':0.5, "Market Perform": 0.5, "NT Strong Buy":1, "NT Buy":1, "Attractive":1, "Mkt Outperform":1, "NT Neutral":0.5, "NT Accum":1, "LT Buy":1, "Reduce":0, "NT Accumulate":1, "Perform In Line":0.5, 'Average':0.5, 'Source of Funds':0, 'Above Average':1, 'Over Weight':1, 'Equal Weight':0.5, 'Peer Perform':0.5, 'Positive':1, 'In-Line':0.5, 'In-line':0.5, 'LT Neutral':0.5, 'Add':1, 'Maintain Position':0.5, 'NT Accum/LT Accum':1, 'Top Pick':1, 'Recomm. List':1, 'LT Attractive':1, 'Strong Sell':0, 'Underweight':0, 'Recomm List':1, 'Market Outperform':1, 'Perform-In-Line':0.5, 'Long-term Buy':1, 'Sector Underperform':0, '':0, 'Trading Buy':1, 'Outperf. Signif.':1, 'Recommended List':1, 'ST Neutral':0.5, 'Mkt Performer':0.5, 'Maintain':0.5}
 
     expertWeights = []
 
@@ -243,11 +243,13 @@ def plotCorrelations(condensedData):
 def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
 
     if update == 'True':
+        # forces recalculations of everything if you want to update
         allStratsRaw = None
         classifier = None
         expertWeights = None
         condensedData = None
     else:
+        # allows you to load things, if they exist and you don't want to update
         if os.path.isfile('allStratsRaw.p'):
             allStratsRaw = pickle.load(open("allStratsRaw.p", "rb"))
         else:
@@ -264,7 +266,8 @@ def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
             condensedData = pickle.load(open("condensedData.p", "rb")) 
         else:
             condensedData = None
-   
+    
+    # recalculates things if they don't exist and saves them
     if not isinstance(allStratsRaw, dict) or not 'DJIA' in allStratsRaw:
         if not isinstance(allStratsRaw, dict):
             allStratsRaw = {}
@@ -297,6 +300,7 @@ def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
         condensedData[whichNYSE] = condenseStrategyData(allStratsRaw,whichNYSE,expertWeights)
         pickle.dump(condensedData, open("condensedData.p", "wb"))
 
+    # always gives you your plot in the end
     plotCorrelations(condensedData[whichNYSE])
 
 
