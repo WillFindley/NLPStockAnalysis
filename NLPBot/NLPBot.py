@@ -13,28 +13,34 @@ from datetime import datetime
 import string
 
 
+# gets the Dow Jones Industrial Average history from a downloaded csv (link in README)
+# a next step would be to automate its download, which would require some form submission automation
 def getDJIAHistoryCSV(pathToDJIACSV,allStratsRaw):
     indexHistory = pd.read_csv(pathToDJIACSV)
-    indexHistory['DATE'] = pd.to_datetime(indexHistory['DATE'])
+    indexHistory['DATE'] = pd.to_datetime(indexHistory['DATE']) # dates are parsed as objects in the frame, and need to be reparsed as datetimes
     indexHistory.columns = [u'Date', u'DJIA']
-    indexHistory['DJIA'] = indexHistory['DJIA'].convert_objects(convert_numeric=True)
-    indexHistory = indexHistory[np.isfinite(indexHistory['DJIA'])]
-    allStratsRaw['DJIA'] = indexHistory
+    indexHistory['DJIA'] = indexHistory['DJIA'].convert_objects(convert_numeric=True) # some of the value entries are blank, and we want NaNs
+    indexHistory = indexHistory[np.isfinite(indexHistory['DJIA'])] # remove the NaN rows
+    allStratsRaw['DJIA'] = indexHistory # store in our stock object
     return allStratsRaw
 
 
+# gets the daily history for a chosen stock (by NYSE ticker) from Yahoo Finance
 def getStockHistoryCSV(whichNYSE,allStratsRaw):
     page = requests.get('http://finance.yahoo.com/q/hp?s=' + whichNYSE + '+Historical+Prices')
     url = 'http://real-chart.finance.yahoo.com/table.' + page.text[page.text.find('csv'):page.text.rfind('csv')+3]
     stockHistory = pd.read_csv(url)
+    # we currently don't do anything with this information, so we drop it.  Future versions will probably retain it though.
     stockHistory.drop([u'Open', u'High', u'Low', u'Close', u'Volume'], inplace=True, axis=1)
-    stockHistory['Date'] = pd.to_datetime(stockHistory['Date'])
+    stockHistory['Date'] = pd.to_datetime(stockHistory['Date']) # fix date issue as above
     stockHistory.columns = [u'Date', unicode(whichNYSE,"utf-8")]
-    stockHistory = stockHistory.iloc[::-1]
-    allStratsRaw[whichNYSE] = stockHistory
+    stockHistory = stockHistory.iloc[::-1] # reverse the rows in time, to bring them in line with what the algorithm does below
+    allStratsRaw[whichNYSE] = stockHistory # store in our stock object
     return allStratsRaw
 
 
+# determines on what days the "Expert" strategy is updates, and what it wants to do
+# this can be made far more interesting and sophisticated in the future
 def getExpertStrategy(whichNYSE,allStratsRaw):
 
     MonthConversion = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
