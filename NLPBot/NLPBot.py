@@ -96,7 +96,7 @@ def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
     # this series of steps for adding the expert models is too slow for reasons mentioned in the fillExpert function
     condensedData['Expert'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
     condensedData['NYT-Bot'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
-#    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
+    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
     condensedData = fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot')
 
     # this step is necessary for the plotting feature for dataframes to work as desired
