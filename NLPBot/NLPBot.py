@@ -308,7 +308,7 @@ if __name__ == '__main__':
             "\n" \
             "The correct usage of NYT-Bot is as follows:\n" \
             "\n" \
-            "python NLPBot.py NLPBot [arg1] [arg2] [arg3] [arg4]\n" \
+            "python NLPBot.py NLPBot [arg1] [arg2] [arg3] [arg4] [arg5]\n" \
             "\n" \
             "arg1 - what is the NYSE ticker label for the company you want to model, e.g. AAPL for Apple\n" \
             "\n" \
