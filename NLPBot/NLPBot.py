@@ -85,26 +85,6 @@ def getExpertStrategy(whichNYSE,allStratsRaw,addActions):
     return expertWeights
 
 
-# takes the expertly determined weights for given dates for both "Experts" and "NYT-Bot and appends them to the stock DataFrame
-def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
-    keys = list(allStratsRaw.keys())
-
-    # doing this before the expert models below is key for restricting dates to only those with useful data
-    condensedData = allStratsRaw[keys.pop()]
-    # already set up for multiple stocks, they just need to be implemented at the main program level
-    while len(keys) > 0:
-        toJoinData = allStratsRaw[keys.pop()]
-        condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
-    # this series of steps for adding the expert models is too slow for reasons mentioned in the fillExpert function
-    condensedData['Expert'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
-    condensedData['NYT-Bot'] = pd.Series(np.random.randn(len(condensedData['Date'])), index=condensedData.index)
-    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert')
-    condensedData = fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot')
-
-    # this step is necessary for the plotting feature for dataframes to work as desired
-    condensedData = condensedData.set_index(u'Date')
-    return condensedData
-
 
 # figure out what good and bad text is like (stupidly) using IMDB user reviews
 def trainSentimentAnlaysis():
@@ -193,16 +173,17 @@ def getNYTimesExpert(commonName,classifier,NYTimesApiKey):
 # this fleshes out the time series of the portfolio using the purchasing decisions of both the bot and the experts
 # there is a for loop in here that needs to be dealt with because it is way-way to slow
 def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
-
+    
+    expertMoney = [] # will become a list of money at increasing dates
     whichWeight = len(expertWeights) - 1 # because of the temporal ordering on expert opinion, first date is the last element
     amountDJIA = 1.0    # the safest default strategy is to be all index
     amountNYSE = 0.0
     # total portfolio is the sum of the stocks and index
     # this calculation and setup is relatively inflexible and should be modified for multiple stocks strategies
-    condensedData[whichExpert][0] = amountDJIA + amountNYSE
+    expertMoney.append(amountDJIA + amountNYSE)
 
-    # this is TOO SLOW.  Come up with a fast way by loop comprehension, or maybe not updating the table like this
-    for row in xrange(1,len(condensedData[whichExpert])):
+    # this is now fast enough
+    for row in xrange(1,len(condensedData['Date'])):
 
         # redistribute investment based on expert opinion
         if whichWeight >= 0 and condensedData['Date'][row] >= expertWeights[whichWeight-1][0]: # there is a new date with a strategy now
@@ -225,10 +206,29 @@ def fillExpert(condensedData,whichNYSE,expertWeights,whichExpert):
         amountDJIA *= condensedData['DJIA'][row] / condensedData['DJIA'][row-1]
 
         # check progress
-        print whichExpert + ':  ' + str(condensedData['Date'][row]) + '     ' + str(amountDJIA) + '     ' + str(amountNYSE)
+        #print whichExpert + ':  ' + str(condensedData['Date'][row]) + '     ' + str(amountDJIA) + '     ' + str(amountNYSE)
         # maybe don't update table here
-        condensedData[whichExpert][row] = amountNYSE + amountDJIA
+        expertMoney.append(amountNYSE + amountDJIA)
 
+    return expertMoney
+
+
+# takes the expertly determined weights for given dates for both "Experts" and "NYT-Bot and appends them to the stock DataFrame
+def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
+    keys = list(allStratsRaw.keys())
+
+    # doing this before the expert models below is key for restricting dates to only those with useful data
+    condensedData = allStratsRaw[keys.pop()]
+    # already set up for multiple stocks, they just need to be implemented at the main program level
+    while len(keys) > 0:
+        toJoinData = allStratsRaw[keys.pop()]
+        condensedData = pd.merge(condensedData, toJoinData, how='inner', on='Date')
+    # this series of steps for adding the expert models is too slow for reasons mentioned in the fillExpert function
+    condensedData['Expert'] = pd.Series(fillExpert(condensedData,whichNYSE,expertWeights['Expert'],'Expert'), index=condensedData.index)
+    condensedData['NYT-Bot'] = pd.Series(fillExpert(condensedData,whichNYSE,expertWeights['NYT-Bot'],'NYT-Bot'), index=condensedData.index)
+
+    # this step is necessary for the plotting feature for dataframes to work as desired
+    condensedData = condensedData.set_index(u'Date')
     return condensedData
 
 
