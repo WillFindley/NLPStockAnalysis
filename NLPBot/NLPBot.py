@@ -230,12 +230,15 @@ def summarizeModel(condensedData):
     keys = list(condensedData.keys())
     stock = keys[0]
     summaryToPlot = condensedData[stock].drop(['Expert', 'NYT-Bot', stock],axis=1)
+    summaryStocks = condensedData[stock].drop(['DJIA', 'Expert', 'NYT-Bot'],axis=1)
     summaryExpert = condensedData[stock].drop(['DJIA', 'NYT-Bot', stock],axis=1)
     summaryNLPBot = condensedData[stock].drop(['DJIA', 'Expert', stock],axis=1)
     for whichStock in xrange(1,len(keys)):
         stock = keys[whichStock]
+        summaryStocks = pd.merge(summaryStocks, condensedData[stock].drop(['DJIA', 'Expert', 'NYT-Bot'],axis=1), how='inner', on='Date')
         summaryExpert = pd.merge(summaryExpert, condensedData[stock].drop(['DJIA', 'NYT-Bot', stock],axis=1), how='inner', on='Date')
         summaryNLPBot = pd.merge(summaryNLPBot, condensedData[stock].drop(['DJIA', 'Expert', stock],axis=1), how='inner', on='Date')
+    summaryToPlot['Stocks Average'] = summaryStocks.drop('Date',axis=1).mean(axis=1)
     summaryToPlot['Expert Average'] = summaryExpert.drop('Date',axis=1).mean(axis=1)
     summaryToPlot['NYT-Bot Average'] = summaryNLPBot.drop('Date',axis=1).mean(axis=1)
 
