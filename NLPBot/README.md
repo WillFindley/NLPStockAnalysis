@@ -14,6 +14,8 @@ get a New York Times Articles API V2 key [from here](http://developer.nytimes.co
 
 ## Usage
 
+This will plot the money made by NYT-Bot for both the individual stock, in the first figure, and the current average over all stocks, in the second figure (after closing the first)
+
 The correct usage of NYT-Bot is as follows:
 
 python NLPBot.py NLPBot [arg1] [arg2] [arg3] [arg4] [arg5]

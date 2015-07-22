@@ -331,21 +331,19 @@ if __name__ == '__main__':
 
     if len(sys.argv) != 7:
         print "\n" \
-            "Your number of arguments is " + str(len(sys.argv)-2) + "\n" \
+            "Your INCORRECT number of arguments was " + str(len(sys.argv)-2) + "\n" \
+            "\n" \
+            "This will plot the money made by NYT-Bot for both the individual stock, in the first figure, and the current average over all stocks, in the second figure (after closing the first)\n"\
             "\n" \
             "The correct usage of NYT-Bot is as follows:\n" \
             "\n" \
             "python NLPBot.py NLPBot [arg1] [arg2] [arg3] [arg4] [arg5]\n" \
             "\n" \
             "arg1 - what is the NYSE ticker label for the company you want to model, e.g. AAPL for Apple\n" \
-            "\n" \
             "arg2 - what is the common name for the company, e.g. Bank\ of\ America for Bank of America\n" \
             "       WARNING: you MUST escape spaces in the company name, i.e. a \" \" should be \"\\ \"\n" \
-            "\n" \
             "arg3 - what is your New York Times Article API V2 key\n" \
-            "\n" \
             "arg4 - True or False : do you want to redownload and recalculate values for everything already saved from previous runs?\n" \
-            "\n" \
             "arg5 - True or False : do you want to have crashes on unexpected Expert Actions so that you can manually edit/update the dictionary in this program?\n" \
             "\n"
     else:
