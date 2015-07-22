@@ -51,7 +51,7 @@ def getExpertStrategy(whichNYSE,allStratsRaw,addActions):
     # this, obnoxiously, has no field standard and needs to be manually updated every time a new one is encountered
     # a more clever and elegant way to hand new terms should be determined
     # in this case, something equivalent to a "Buy" translates to a 1, a "Neutral" translates to a 0.5, and a "Sell" translates to a 0
-    ActionConversion = {'Buy':1, 'Underperform':0, 'Sector Perform':0.5, 'Neutral':0.5, 'Outperform':1, 'Mkt Underperform':0, 'Mkt Perform':0.5, 'Hold':0.5, 'Perform':0.5, 'Accumulate':1, 'Sell':0, 'In Line':0.5, 'Strong Buy':1, 'Overweight':1, 'Sector Outperform':1, 'Equal-weight':0.5, "Market Perform": 0.5, "NT Strong Buy":1, "NT Buy":1, "Attractive":1, "Mkt Outperform":1, "NT Neutral":0.5, "NT Accum":1, "LT Buy":1, "Reduce":0, "NT Accumulate":1, "Perform In Line":0.5, 'Average':0.5, 'Source of Funds':0, 'Above Average':1, 'Over Weight':1, 'Equal Weight':0.5, 'Peer Perform':0.5, 'Positive':1, 'In-Line':0.5, 'In-line':0.5, 'LT Neutral':0.5, 'Add':1, 'Maintain Position':0.5, 'NT Accum/LT Accum':1, 'Top Pick':1, 'Recomm. List':1, 'LT Attractive':1, 'Strong Sell':0, 'Underweight':0, 'Recomm List':1, 'Market Outperform':1, 'Perform-In-Line':0.5, 'Long-term Buy':1, 'Sector Underperform':0, '':0, 'Trading Buy':1, 'Outperf. Signif.':1, 'Recommended List':1, 'ST Neutral':0.5, 'Mkt Performer':0.5, 'Maintain':0.5}
+    ActionConversion = {'Buy':1, 'Underperform':0, 'Sector Perform':0.5, 'Neutral':0.5, 'Outperform':1, 'Mkt Underperform':0, 'Mkt Perform':0.5, 'Hold':0.5, 'Perform':0.5, 'Accumulate':1, 'Sell':0, 'In Line':0.5, 'Strong Buy':1, 'Overweight':1, 'Sector Outperform':1, 'Equal-weight':0.5, "Market Perform": 0.5, "NT Strong Buy":1, "NT Buy":1, "Attractive":1, "Mkt Outperform":1, "NT Neutral":0.5, "NT Accum":1, "LT Buy":1, "Reduce":0, "NT Accumulate":1, "Perform In Line":0.5, 'Average':0.5, 'Source of Funds':0, 'Above Average':1, 'Over Weight':1, 'Equal Weight':0.5, 'Peer Perform':0.5, 'Positive':1, 'In-Line':0.5, 'In-line':0.5, 'LT Neutral':0.5, 'Add':1, 'Maintain Position':0.5, 'NT Accum/LT Accum':1, 'Top Pick':1, 'Recomm. List':1, 'LT Attractive':1, 'Strong Sell':0, 'Underweight':0, 'Recomm List':1, 'Market Outperform':1, 'Perform-In-Line':0.5, 'Long-term Buy':1, 'Sector Underperform':0, '':0, 'Trading Buy':1, 'Outperf. Signif.':1, 'Recommended List':1, 'ST Neutral':0.5, 'Mkt Performer':0.5, 'Maintain':0.5, 'ST Mkt Perform':0.5, 'ST Buy':1, 'LT Mkt Performer':0.5, 'Buy Aggressive':1, 'NT Mkt Performer':0.5, 'NT/LT Outperformer':1, 'IT Outperform':1, 'Buy-Focus List':1, 'Outperform/Buy':1, 'Avoi':0, 'Mkt Outperformer':1, 'ST Accumulate':1, 'NT Neut/LT Buy':1, 'NT Neutral/LT Buy':1, 'Long Term Buy':1, 'ST Mkt Perform/LT Buy':1, 'Below Average':0, 'Net Positive':1, 'LT Accum':1, 'Avoid':0, 'Buy $100':1, 'NT Accum/LT Buy':1, 'LT Accumulate':1, 'US Recomm. List':1, 'NT Outperformer':1, 'NT/LT Mkt Performer':0.5, 'NT/LT Buy':1, 'NT Ntrl/LT Accm':1, 'NT Mkt Outperformer':1, 'NT Acc/LT Buy':1, 'Buy/Core':1, 'LT Mkt Perform':0.5, 'NT Strong Buy/LT Strong Buy':1, 'Equal-Weight':0.5}
 
     expertWeights = []
 
@@ -222,13 +222,32 @@ def condenseStrategyData(allStratsRaw,whichNYSE,expertWeights):
     condensedData['Expert'] = pd.Series(fillExpert(condensedData,whichNYSE,expertWeights[whichNYSE]['Expert'],'Expert'), index=condensedData.index)
     condensedData['NYT-Bot'] = pd.Series(fillExpert(condensedData,whichNYSE,expertWeights[whichNYSE]['NYT-Bot'],'NYT-Bot'), index=condensedData.index)
 
-    # this step is necessary for the plotting feature for dataframes to work as desired
-    condensedData = condensedData.set_index(u'Date')
     return condensedData
+
+
+def summarizeModel(condensedData):
+    
+    keys = list(condensedData.keys())
+    stock = keys[0]
+    summaryToPlot = condensedData[stock].drop(['Expert', 'NYT-Bot', stock],axis=1)
+    summaryExpert = condensedData[stock].drop(['DJIA', 'NYT-Bot', stock],axis=1)
+    summaryNLPBot = condensedData[stock].drop(['DJIA', 'Expert', stock],axis=1)
+    for whichStock in xrange(1,len(keys)):
+        stock = keys[whichStock]
+        summaryExpert = pd.merge(summaryExpert, condensedData[stock].drop(['DJIA', 'NYT-Bot', stock],axis=1), how='inner', on='Date')
+        summaryNLPBot = pd.merge(summaryNLPBot, condensedData[stock].drop(['DJIA', 'Expert', stock],axis=1), how='inner', on='Date')
+    summaryToPlot['Expert'] = summaryExpert.drop('Date',axis=1).mean(axis=1)
+    summaryToPlot['NYT-Bot'] = summaryNLPBot.drop('Date',axis=1).mean(axis=1)
+
+    return summaryToPlot
 
 
 # make the pretty graphs
 def plotCorrelations(condensedData):
+
+    # this step is necessary for the plotting feature for dataframes to work as desired
+    condensedData = condensedData.set_index(u'Date')
+    
     keys = list(condensedData.columns)
     # start all strategies at 1 to see their relative change in revenue
     for key in keys:
@@ -302,6 +321,10 @@ def NLPBot(whichNYSE,commonName,NYTimesApiKey,update,addActions):
 
     # always gives you your plot in the end
     plotCorrelations(condensedData[whichNYSE])
+    
+    # always recalculated to save storage, and easy calculation
+    fullModel = summarizeModel(condensedData)
+    plotCorrelations(fullModel)
 
 
 if __name__ == '__main__':
